@@ -1,0 +1,13 @@
+<package>
+  <description brief="Trajectory planner for cartesian and in joint space.">
+  
+  </description>
+  <author>Sankaranaranayanan Natarajan/sankar.natarajan@dfki.de</author>
+  <author>Rohit Menon/rohit.menon@dfki.de</author>
+  <license></license>
+  <url>http://</url>
+  <logo>http://</logo>
+  <depend package="base/cmake" />
+  <depend package="base/types" />
+
+</package>
