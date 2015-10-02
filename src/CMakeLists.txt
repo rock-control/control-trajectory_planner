@@ -6,7 +6,7 @@ rock_library(trajectory_planner
             TrajectoryPlanner.hpp
             TrajectoryPlannerConfig.hpp
             bezier_curve/BezierCurve.hpp
-    DEPS_PKGCONFIG base-types
+    DEPS_PKGCONFIG eigen3 base-types
 )
 
 
