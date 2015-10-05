@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-
+#include<iostream>
 #include "BezierCurve.hpp"
 
 namespace trajectory_planner
@@ -15,9 +15,47 @@ namespace trajectory_planner
     {
 
     }
-
-    base::MatrixXd BezierCurve::calc_bezier_curve(const base::MatrixXd & pts, const int& num_int)
+    
+    void BezierCurve::check_bezier_curve(base::MatrixXd & pts)
     {
+      int no_pts_input=int(pts.rows());
+      int dim_input=int(pts.cols());
+      
+      switch (no_pts_input)
+      {
+	case 0:
+	{
+	  
+	  std::cout<<"Points matrix empty. Needs atleast two points"<<std::endl;
+	  break;
+	}  
+	case 1:
+	{ 
+	  std::cout<<"Points matrix has only one point. Needs atleast two points"<<std::endl;
+	  break;
+	}  
+	case 2:
+	{
+	  std::cout<<"Adding intermediate points for linear interpolation"<<std::endl;
+	  base::MatrixXd pts_temp=pts;
+	  pts.resize(4,dim_input);
+	  pts.row(0)=pts_temp.row(0);
+	  pts.row(1)=0.3333*pts_temp.row(0)+0.667*pts_temp.row(1);
+	  pts.row(2)=0.6667*pts_temp.row(0)+0.333*pts_temp.row(1);
+	  pts.row(3)=pts_temp.row(1);
+	  break;
+	}  
+	default:
+	{
+	  std::cout<<"Calculating bezier curve"<<std::endl;
+	}
+      }
+    }
+
+    base::MatrixXd BezierCurve::calc_bezier_curve(const base::MatrixXd & pts_in, const int& num_int)
+    {
+        base::MatrixXd pts=pts_in;
+        this->check_bezier_curve(pts);
         Eigen::MatrixXd points=pts;
         no_pts=int(points.rows())-1;
         dim= int(points.cols());

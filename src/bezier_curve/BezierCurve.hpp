@@ -27,6 +27,9 @@ namespace trajectory_planner
             ~BezierCurve();
 
             base::MatrixXd calc_bezier_curve(const base::MatrixXd & pts, const int& num_int);
+	    
+	    //Checks the no of points and takes action accordingly
+	    void check_bezier_curve(base::MatrixXd & pts);
 
             //computes the spline point for a given bezier coefficient. this is an internal func called in comp_bezier_pt
             template <typename Derived>
