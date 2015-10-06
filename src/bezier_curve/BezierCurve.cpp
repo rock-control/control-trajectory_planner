@@ -40,8 +40,8 @@ namespace trajectory_planner
 	  base::MatrixXd pts_temp=pts;
 	  pts.resize(4,dim_input);
 	  pts.row(0)=pts_temp.row(0);
-	  pts.row(1)=0.3333*pts_temp.row(0)+0.667*pts_temp.row(1);
-	  pts.row(2)=0.6667*pts_temp.row(0)+0.333*pts_temp.row(1);
+	  pts.row(1)=0.67*pts_temp.row(0)+0.33*pts_temp.row(1);
+	  pts.row(2)=0.33*pts_temp.row(0)+0.67*pts_temp.row(1);
 	  pts.row(3)=pts_temp.row(1);
 	  break;
 	}  
