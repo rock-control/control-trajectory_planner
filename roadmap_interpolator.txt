@@ -1,0 +1,7 @@
+1. Create a cartesian Bezier Curve interpolator- Completed
+2. Adapt the above controller for joint space path planning- Add velocity and acceleration checks. Use the Kuka IIWA as the test case. To be completed by Oct end.
+3. Extend the bezier curve for various special cases. i.e. different start and end accelerations. (In stage 2 we develop it with C"(0)=C"(end)=0). By nov end
+4. Modify the path planning interpolator for explicit trajectory planning. 
+5. Check the requirements for different use cases and integrate into the libray without loss of generality
+6. Online generation of trajectory  if speed of operation permits
+7. Addition of other interpolation programs like polynomial, NURBS if found necessary

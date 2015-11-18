@@ -12,7 +12,7 @@
 #include "AbstractInterpolator.hpp"
 #include "TrajectoryPlannerConfig.hpp"
 #include <trajectory_planner/bezier_curve/BezierCurve.hpp>
-
+#include <trajectory_planner/joints_traj/joints_trajectory.hpp>
 
 namespace trajectory_planner
 {

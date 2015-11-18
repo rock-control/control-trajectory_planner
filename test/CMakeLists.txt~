@@ -9,5 +9,5 @@ INCLUDE_DIRECTORIES(${BASE_INCLUDE_DIRS})
 LINK_DIRECTORIES(${BASE_LIBRARY_DIRS})
 
 rock_executable(test_interpolator test.cpp DEPS trajectory_planner)
-rock_executable(test_jointstrajectory test_joints.cpp DEPS trajectory_planner)
+#rock_executable(test_jointstrajectory test_joints.cpp DEPS trajectory_planner)
 target_link_libraries(test_interpolator base)

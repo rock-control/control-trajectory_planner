@@ -15,11 +15,14 @@ namespace trajectory_planner
             {
                 mInterpolator = boost::shared_ptr<AbstractInterpolator> (new BezierCurve());
                 break;
-            }            
+            }
+            
+	   
             default:
             {
-                LOG_ERROR("This TrajectoryInterpolator is not available");
-                throw new std::runtime_error("This TrajectoryInterpolator is not available");
+                /*LOG_ERROR("This TrajectoryInterpolator is not available");
+                throw new std::runtime_error("This TrajectoryInterpolator is not available");*/
+		std::cout<<"This TrajectoryInterpolator is not available"<<std::endl;
             }
         }
 

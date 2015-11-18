@@ -8,7 +8,7 @@ namespace trajectory_planner
 
 enum InterpolatorType
 {
-    BEZIER
+  BEZIER, JOINTS_BEZIER
 };
 
 /**
@@ -24,6 +24,7 @@ struct ConstraintStruct
 struct TrajectoryPlannerConfig
 {
     TrajectoryPlannerConfig() : mInterpolatorType(BEZIER){}
+    
 
     // interpolator type: currently 1 type of interpolator is available
     enum InterpolatorType mInterpolatorType;
