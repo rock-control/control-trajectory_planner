@@ -46,6 +46,7 @@ namespace trajectory_planner
 	    array_3D m_bCoeffs, x11;
 	    base::MatrixXd m_trajPoints,m_deBoorPoints,m_bCurve;
 	    base::VectorXd m_numIntervals_vec;
+	    //base::MatrixXd m_bCoeffStart, m_bCoeffEnd;
 	   // void initialise_data();
 	    
             base::MatrixXd calc_bezier_curve(const base::MatrixXd & pts, const int& num_int);
@@ -64,7 +65,9 @@ namespace trajectory_planner
             base::MatrixXd comp_bezier_curve(int num_intervals);
 	    base::MatrixXd comp_bezier_curve(base::VectorXd& num_intervals);
 	    void comp_bezier_curve(const array_3D& bCoeffs, base::VectorXd& num_intervals,base::MatrixXd& b_curve, int pt);
+	    base::MatrixXd comp_bezier_curve(base::VectorXd& num_intervals, base::MatrixXd bCoeffStart_pos, base::MatrixXd bCoeffEnd_pos, int curveType);
 	    void comp_bezier_curve_deriv(const base::MatrixXd& bezierCurve, int interval, base::MatrixXd& bezierCurve_deriv);
+	   
 	    void comp_deBoor_controlpts();
 	    void read_input_data(const base::MatrixXd & pts_in, const base::VectorXd num_int, int condition);
 	    void initialise_data(int noTrajPts, int dim, double period, double order, double end_condition);
@@ -72,8 +75,8 @@ namespace trajectory_planner
 
 	    void comp_bezier_coeff();
             array_3D comp_bezier_coeff_deriv(array_3D bCoeffs);
-	    array_3D comp_bezier_coeff_start(array_3D bCoeffs);
-	    array_3D comp_bezier_coeff_end(array_3D bCoeffs);
+	    base::MatrixXd comp_bezier_coeff_start(array_3D bCoeffs, base::MatrixXd bCoeff_extreme, int curveType);
+	    base::MatrixXd comp_bezier_coeff_end(array_3D bCoeffs, base::MatrixXd bCoeff_extreme, int curveType);
 	    void add_points(const base::VectorXi& newPoints);
            
 	   

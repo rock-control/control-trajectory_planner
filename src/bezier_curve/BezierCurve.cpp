@@ -137,6 +137,7 @@ unsigned factorial(unsigned n)
       m_dim=dim;      
       m_noPts=noTrajPts-1;
       
+      m_trajPoints.resize(m_noPts+1, m_dim);
       m_deBoorPoints.resize(m_noPts+3, m_dim);
       m_bCoeffs.resize(boost::extents[m_dim][m_noPts][order]);
      // m_bCurve.resize(m_noPts*m_numIntervals+1,m_dim);
@@ -209,14 +210,21 @@ unsigned factorial(unsigned n)
           //Eigen::MatrixXd points=pts;
 
           int no_d_pts=m_noPts+3;
-          //std::cout<<no_d_pts<<std::endl;
-
+	  double d0,dN;
+          
+	  if(m_condition==2)
+	  {
+	    std::cout<<"Enter d0 "<<std::endl;
+	    std::cin>>d0;
+	  }
+	  
           Eigen::MatrixXd A=Eigen::MatrixXd::Zero(1, 1);
+	  std::cout<<"End condition= "<<m_condition<<std::endl;
 	  switch(m_condition)
 	  {
 	    case 0: //end acceleration=0
             {
-	      std::cout<<"End condition= "<<m_condition<<std::endl;
+	      //std::cout<<"End condition= "<<m_condition<<std::endl;
 	      if (m_noPts>2)
               {
 		A=Eigen::MatrixXd::Zero(m_noPts-1, m_noPts-1);
@@ -224,14 +232,33 @@ unsigned factorial(unsigned n)
                 A(0,1)=1;
                 A(m_noPts-2, m_noPts-3)=1;
                 A(m_noPts-2, m_noPts-2)=4;
-                break;
+                
               }
               else
               {
                 A(0,0)=4;
 	      }
+	      break;
             }
 	    case 1: //end velocities=0
+	    {
+	      if (m_noPts>2)
+	      {
+		A=Eigen::MatrixXd::Zero(m_noPts-1, m_noPts-1);
+		A(0,0)=7/2;
+		A(0,1)=1;
+		A(m_noPts-2, m_noPts-3)=1;
+		A(m_noPts-2, m_noPts-2)=7/2;
+	      }
+	      else
+	      {
+		A(0,0)=4;
+	      }
+	      
+	      break;
+	    }
+	    
+	    case 2: //end velocities=0
 	    {
 	      if (m_noPts>2)
 	      {
@@ -247,6 +274,7 @@ unsigned factorial(unsigned n)
 	      {
 		A(0,0)=4;
 	      }
+	      break;
 	    }
 	    
 	    default:
@@ -282,10 +310,18 @@ unsigned factorial(unsigned n)
 
 	    case 1:
             {
-	      x(m_noPts-2, 0)=6*m_trajPoints(m_noPts-1, col)-m_trajPoints(m_noPts, col);
-	      x(0,0)=6*m_trajPoints(1,col)-m_trajPoints(0,col);
+	      x(m_noPts-2, 0)=6*m_trajPoints(m_noPts-1, col)-1.5*m_trajPoints(m_noPts, col);
+	      x(0,0)=6*m_trajPoints(1,col)-1.5*m_trajPoints(0,col);
 	      break;
             }
+            
+	    case 2:
+	    {
+	      x(m_noPts-2, 0)=6*m_trajPoints(m_noPts-1, col)-1.5*(d0*m_trajPoints(m_noPts,col)+(1-d0)*m_trajPoints(m_noPts-1,col));
+	      x(0,0)=6*m_trajPoints(1,col)-1.5*(d0*m_trajPoints(0,col)+(1-d0)*m_trajPoints(1,col));
+	      break;
+	    }
+	    
 	    default:
 	    {
 	    }
@@ -325,6 +361,14 @@ unsigned factorial(unsigned n)
 	    m_deBoorPoints.row(m_noPts+1)=m_trajPoints.row(m_noPts);
 	    break;
 	  }
+	  
+	  case 2:
+	  {
+	    m_deBoorPoints.row(1)=d0*m_trajPoints.row(0)+(1-d0)*m_trajPoints.row(1);
+	    m_deBoorPoints.row(m_noPts+1)=d0*m_trajPoints.row(m_noPts)+(1-d0)*m_trajPoints.row(m_noPts-1);
+	    break;
+	  }
+	  
 	  default:
           {
           std::cout<<"Condition not added"<<std::endl;
@@ -641,6 +685,66 @@ unsigned factorial(unsigned n)
 	  return b_curve;
 	}
 	
+	base::MatrixXd BezierCurve::comp_bezier_curve(base::VectorXd& num_intervals, base::MatrixXd bCoeffStart_pos, base::MatrixXd bCoeffEnd_pos, int curveType)
+	{
+	  //int m_dim=m_bCoeffs.shape()[0];
+	  //int m_noPts=m_bCoeffs.shape()[1];
+	  base::MatrixXd b_curve(int(num_intervals.sum())+1,m_dim);
+	  b_curve.fill(0);
+	  for(int i=0; i<m_dim; i++)
+	  {
+	    b_curve(0,i)=m_bCoeffs[i][0][0];
+	  }
+	  
+	  int ctr=0;
+	  
+	  
+	  Eigen::MatrixXd b_coeff_set;
+	  for(int curr_b_pt=0;curr_b_pt<m_noPts;curr_b_pt++)
+	  {
+	    
+	    if(curr_b_pt==0)
+	    {
+	      b_coeff_set.resize(m_dim, m_bCoeffs.shape()[2]+2);
+	      b_coeff_set=comp_bezier_coeff_start(m_bCoeffs, bCoeffStart_pos,curveType);
+	    }
+	    
+	    else if(curr_b_pt==m_noPts-1)
+	    {
+	      b_coeff_set.resize(m_dim, m_bCoeffs.shape()[2]+2);
+	      b_coeff_set=comp_bezier_coeff_end(m_bCoeffs, bCoeffEnd_pos,curveType);
+	    }
+	    else{
+	    
+	    b_coeff_set.resize(m_dim, m_bCoeffs.shape()[2]);
+	    
+	    for(int i=0; i<m_dim; i++)
+	    {
+	      for(int j=0;j<m_bCoeffs.shape()[2]; j++)
+	      {
+		b_coeff_set(i,j)=m_bCoeffs[i][curr_b_pt][j];
+	      }
+	    }
+	    }
+	    // if(curr_b_pt==0)
+	    //  std::cout<<"b coeffset= "<<b_coeff_set<<std::endl;
+	    
+	    double interval= 1.0/num_intervals(curr_b_pt);
+	    Eigen::VectorXd t(num_intervals(curr_b_pt));
+	    t=Eigen::VectorXd::LinSpaced(num_intervals(curr_b_pt),interval,1);
+	    
+	    for(int iteration=0; iteration<int(num_intervals(curr_b_pt)); iteration++)
+	    {
+	      // std::cout<<"iteration= "<<iteration<<std::endl;
+	      b_curve.row(ctr+1)=this->comp_spline_pt(b_coeff_set,t(iteration));
+	      // std::cout<<b_curve.row(num_intervals(curr_b_pt)+iteration+1)<<std::endl;
+	      ctr=ctr+1;
+	    }
+	  }
+	  return b_curve;
+	}
+	
+	
 	void BezierCurve::comp_bezier_curve(const array_3D& bCoeffs, base::VectorXd& num_intervals,base::MatrixXd& b_curve, int pt)
 	{
 	 
@@ -658,7 +762,6 @@ unsigned factorial(unsigned n)
 	  int ctr=0;
 	  for(int curr_b_pt=pt;curr_b_pt<pt+noPts;curr_b_pt++)
 	  {
-	   
 	    Eigen::MatrixXd b_coeff_set(m_dim, order);
 	  //  std::cout<<curr_b_pt<<std::endl;
 	    for(int i=0; i<m_dim; i++)
@@ -721,41 +824,100 @@ unsigned factorial(unsigned n)
 	  
 	}
 	
-	array_3D BezierCurve::comp_bezier_coeff_start(array_3D bCoeffs)
+	base::MatrixXd  BezierCurve::comp_bezier_coeff_start(array_3D bCoeffs, base::MatrixXd bCoeff_extreme, int curveType)
 	{
 	  int dim=bCoeffs.shape()[0];
-	  array_3D bCoeffs_start(boost::extents[dim][1][6]);
 	  
-	  for(int i=0;i<dim;i++)
+	  switch(curveType)
 	  {
-	    bCoeffs_start[i][0][0]=bCoeffs[i][0][0];
-	    bCoeffs_start[i][0][1]=bCoeffs[i][0][0];
-	    bCoeffs_start[i][0][2]=bCoeffs[i][0][0];
-	    bCoeffs_start[i][0][3]=(bCoeffs[i][0][3]+6*bCoeffs[i][0][2]+3*bCoeffs[i][0][1])/10;
-	    bCoeffs_start[i][0][4]=(2*bCoeffs[i][0][3]+3*bCoeffs[i][0][2])/5;
-	    bCoeffs_start[i][0][5]=bCoeffs[i][0][3];
-	  }
+	    case 0:
+	    {
+	      base::MatrixXd bCoeffs_start(dim,6);
 	  
-	  return bCoeffs_start;
+	      for(int i=0;i<dim;i++)
+	      {
+		bCoeffs_start(i,0)=bCoeffs[i][0][0];
+		bCoeffs_start(i,1)=bCoeffs[i][0][0];
+		bCoeffs_start(i,2)=bCoeffs[i][0][0];
+		bCoeffs_start(i,3)=(bCoeffs[i][0][3]+6*bCoeffs[i][0][2]+3*bCoeffs[i][0][1])/10;
+		bCoeffs_start(i,4)=(2*bCoeffs[i][0][3]+3*bCoeffs[i][0][2])/5;
+		bCoeffs_start(i,5)=bCoeffs[i][0][3];
+	      }
+	      
+	      return bCoeffs_start;
+	    }
+	    case 1:
+	    {
+	      int degree=bCoeff_extreme.cols()-1;
+	      base::MatrixXd bCoeffs_start(dim,degree);
+	      for(int i=0;i<dim; i++)
+	      {
+		for(int k=0;k<degree;k++)
+		{
+		  //std::cout<<bCoeffs[i][j][k]<<" ";
+		  bCoeffs_start(i,k)=(degree)*(bCoeff_extreme(i,k+1)-bCoeff_extreme(i,k));
+		}
+		  //	std::cout<<bCoeffs[i][j][degree]<<" ";
+		  //std::cout<<""<<std::endl;
+	      }  
+	
+	      return bCoeffs_start;
+	    }
+	    
+	    default:
+	    {
+	      return base::MatrixXd(1,1);
+	    }
+	  }
+
 	}
 	
 	
-	array_3D BezierCurve::comp_bezier_coeff_end(array_3D bCoeffs)
+	base::MatrixXd  BezierCurve::comp_bezier_coeff_end(array_3D bCoeffs, base::MatrixXd bCoeff_extreme, int curveType)
 	{
 	  int dim=bCoeffs.shape()[0];
 	  int noPts=bCoeffs.shape()[1];
-	  array_3D bCoeffs_end(boost::extents[dim][1][6]);
 	  
-	  for(int i=0;i<dim;i++)
+	  switch(curveType)
 	  {
-	    bCoeffs_end[i][0][0]=bCoeffs[i][noPts-1][0];
-	    bCoeffs_end[i][0][1]=(3*bCoeffs[i][noPts-1][1]+2*bCoeffs[i][noPts-1][0])/5;
-	    bCoeffs_end[i][0][2]=(bCoeffs[i][noPts-1][0]+6*bCoeffs[i][noPts-1][1]+3*bCoeffs[i][noPts-1][2])/10;
-	    bCoeffs_end[i][0][3]=bCoeffs[i][noPts-1][3];
-	    bCoeffs_end[i][0][4]=bCoeffs[i][noPts-1][3];
-	    bCoeffs_end[i][0][5]=bCoeffs[i][noPts-1][3];
-	  }	
-	  return bCoeffs_end;
+	  
+	    case 0:
+	    {
+	      base::MatrixXd  bCoeffs_end(dim,6);
+	  
+	      for(int i=0;i<dim;i++)
+	      {
+		bCoeffs_end(i,0)=bCoeffs[i][noPts-1][0];
+		bCoeffs_end(i,1)=(3*bCoeffs[i][noPts-1][1]+2*bCoeffs[i][noPts-1][0])/5;
+		bCoeffs_end(i,2)=(bCoeffs[i][noPts-1][0]+6*bCoeffs[i][noPts-1][1]+3*bCoeffs[i][noPts-1][2])/10;
+		bCoeffs_end(i,3)=bCoeffs[i][noPts-1][3];
+		bCoeffs_end(i,4)=bCoeffs[i][noPts-1][3];
+		bCoeffs_end(i,5)=bCoeffs[i][noPts-1][3];
+	      }	
+	      return bCoeffs_end;
+	    }
+	    case 1:
+	    {
+	      int degree=bCoeff_extreme.cols()-1;
+	      base::MatrixXd bCoeffs_end(dim,degree);
+	      for(int i=0;i<dim; i++)
+	      {
+		for(int k=0;k<degree;k++)
+		{
+		  //std::cout<<bCoeffs[i][j][k]<<" ";
+		  bCoeffs_end(i,k)=(degree)*(bCoeff_extreme(i,k+1)-bCoeff_extreme(i,k));
+		}
+		  //	std::cout<<bCoeffs[i][j][degree]<<" ";
+		  //std::cout<<""<<std::endl;
+		}  
+	      return bCoeffs_end;
+	      }
+	    
+	    default:
+	    {
+	      return base::MatrixXd(1,1);
+	    }
+	  }
 	}
 	
 	void BezierCurve::comp_bezier_curve_deriv(const base::MatrixXd& bezierCurve, int interval, base::MatrixXd& bezierCurve_deriv)
