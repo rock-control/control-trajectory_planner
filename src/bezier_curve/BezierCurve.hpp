@@ -8,8 +8,6 @@
 #include <cassert>
 #include <Eigen/Dense>
 #include <math.h>
-#include "../../../install/include/base/Eigen.hpp"
-
 #include <trajectory_planner/AbstractInterpolator.hpp>
 
 namespace base
