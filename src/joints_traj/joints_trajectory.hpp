@@ -13,11 +13,11 @@
 #include <Eigen/Dense>
 #include <math.h>
 #include <eigen3/Eigen/src/Core/EigenBase.h>
-#include "../bezier_curve/BezierCurve.hpp"
+#include <trajectory_planner/bezier_curve/BezierCurve.hpp>
 #include <base/JointLimits.hpp>
 #include <trajectory_planner/AbstractInterpolator.hpp>
 #include<base/JointsTrajectory.hpp>
-#include<utils/ReadJointLimits.hpp>
+#include"Utils.hpp"
 
 namespace trajectory_planner
 {

@@ -58,20 +58,188 @@ namespace trajectory_planner
        
   }
   
-  base::JointsTrajectory joints_trajectory::calc_joint_traj_bezier(const base::JointsTrajectory& joints_traj_in, const base::JointLimits& limits,  double period, double acc_max, int end_condition, double time_desired)
+  void joints_trajectory::initialise_data(const base::JointLimits& limits,  double period, double acc, int speed_level, int end_condition)
+  {
+    if(m_const==0)
+    {
+      
+      m_jointsLimits=limits;
+      m_period=period;
+      m_accMax=acc;
+      m_accMin=-acc;
+      m_speedLevel=speed_level;
+      m_endCondition=end_condition;
+      
+      
+    }  
+    
+  }
+  
+  //wrapper function that takes sparse trajectory and outputs interpolated one 
+  
+  base::JointsTrajectory joints_trajectory::calc_joint_traj_bezier(const base::JointsTrajectory& joints_traj_in)
   {
     
+    m_dim=joints_traj_in.getNumberOfJoints();
+    std::cout<<"start0  "<<m_dim<<std::endl;
+    m_noTrajPts=joints_traj_in.getTimeSteps();
+    std::cout<<"start1  "<<m_noTrajPts<<std::endl;
+    m_timeSteps.resize(m_noTrajPts);
+    m_numIntervals.resize(m_noTrajPts-1);   
+    m_numIntervals.fill(ceil(1/m_period));
+    m_order=4;
+    
+    if(joints_traj_in.isTimed())
+    {
+      hasTime=1;
+    }  
+    std::cout<<"start1"<<std::endl;
+    
+    m_jointsPos_curve.initialise_data(m_noTrajPts, m_dim, m_period, 4, m_endCondition);
+    m_jointsVel_curve.initialise_data(m_noTrajPts, m_dim, m_period, 4, m_endCondition);
+    m_jointsAcc_curve.initialise_data(m_noTrajPts, m_dim, m_period, 4, m_endCondition);
+    
+    map_jointsTraj2baseMatrix(joints_traj_in);
+    // m_jointsPos_curve.initialise_data();
+    std::cout<<"start2"<<std::endl;
+    int addPts_flag=0;
+    double time_interval=1;
+    int do_ctr=0;  
+    int ctr_lim=1;
+   // std::cout<<"Enter time optim counter"<<std::endl;
+   // std::cin>>ctr_lim;
+    
+    base::VectorXi newPoints(m_numIntervals.size());
+    newPoints.fill(0);
+    
+    std::cout<<"start"<<std::endl;
+    
+    
+    m_jointsPos_curve.comp_deBoor_controlpts();
+    m_jointsPos_curve.comp_bezier_coeff();
+    // std::cout<<"m_jointsPos_curve.comp_bezier_coeff"<<std::endl;
+    m_jointsPos_curve.comp_bezier_curve();
+    std::cout<<"m_jointsPos_curve.comp_bezier_curve1"<<std::endl;
+    int posLimit_exceeded=0;
+    posLimit_exceeded=check_position(newPoints);
+    //std::cout<<"newPoints1="<<newPoints<<std::endl;
+    if(posLimit_exceeded)
+    {
+      
+      std::cout<<"posLimit_exceeded"<<std::endl;
+      
+      m_jointsPos_curve.add_points(newPoints);
+      newPoints.resize(newPoints.size()+newPoints.sum());
+      newPoints.fill(0);
+      m_numIntervals.resize(newPoints.size());
+      // std::cout<<"m_numIntervals.size="<<m_numIntervals.size()<<std::endl;
+      m_noTrajPts=m_jointsPos_curve.m_trajPoints.rows();
+      //  std::cout<<"m_noTrajPts.size="<<m_noTrajPts<<std::endl;
+    }
+    
+    do
+    {
+      std::cout<<"entering do"<<std::endl;
+      if(addPts_flag)	
+      {
+	m_jointsPos_curve.add_points(newPoints);  
+	newPoints.resize(newPoints.size()+newPoints.sum());
+	newPoints.fill(0);
+	m_numIntervals.resize(newPoints.size());
+	//std::cout<<"m_numIntervals.size="<<m_numIntervals.size()<<std::endl;
+	m_noTrajPts=m_jointsPos_curve.m_trajPoints.rows();
+	//std::cout<<"m_noTrajPts.size="<<m_noTrajPts<<std::endl;
+      }
+      m_numIntervals.fill(ceil(time_interval/m_period));
+      m_jointsPos_curve.m_bCurve.resize(int(m_numIntervals.sum()+1),m_dim);
+      m_jointsVel_curve.m_bCurve.resize(int(m_numIntervals.sum()+1),m_dim);
+      m_jointsAcc_curve.m_bCurve.resize(int(m_numIntervals.sum()+1),m_dim);
+      m_jointsPos_curve.initialise_data(m_noTrajPts, m_dim,m_period,m_order,1);
+      std::cout<<"m_jointsPos_curve.initialise_data"<<std::endl;
+      m_jointsVel_curve.initialise_data(m_noTrajPts, m_dim,m_period,m_order-1,0);
+      m_jointsAcc_curve.initialise_data(m_noTrajPts, m_dim,m_period,m_order-2,0);
+      m_jointsPos_curve.comp_deBoor_controlpts();
+      m_jointsPos_curve.comp_bezier_coeff();
+      std::cout<<"m_jointsPos_curve.comp_bezier_coeff"<<std::endl;
+      
+      m_jointsPos_curve.m_bCurve=m_jointsPos_curve.comp_bezier_curve(m_numIntervals);
+      
+      std::cout<<"m_jointsPos_curve.comp_bezier_curve"<<std::endl;
+    //  write_data(m_jointsPos_curve.m_bCurve, "pos_bCurve0.txt");
+      m_jointsVel_curve.m_bCoeffs= m_jointsPos_curve.comp_bezier_coeff_deriv(m_jointsPos_curve.m_bCoeffs);
+      
+      m_jointsAcc_curve.m_bCoeffs.resize(boost::extents[m_jointsPos_curve.m_bCoeffs.shape()[0]][m_jointsPos_curve.m_bCoeffs.shape()[1]][m_jointsPos_curve.m_bCoeffs.shape()[2]-2]);
+      m_jointsAcc_curve.m_bCoeffs= m_jointsPos_curve.comp_bezier_coeff_deriv(m_jointsVel_curve.m_bCoeffs);
+      
+      //m_jointsVel_curve.comp_bezier_curve_deriv(m_jointsPos_curve.m_bCurve, 1/m_period, m_jointsVel_curve.m_bCurve);
+      m_jointsVel_curve.m_bCurve= m_jointsVel_curve.comp_bezier_curve(m_numIntervals)/time_interval;
+      //write_data(m_jointsVel_curve.m_bCurve, "vel_bCurve0_deriv.txt");
+      
+      //   m_jointsAcc_curve.comp_bezier_curve_deriv(m_jointsVel_curve.m_bCurve, 1/m_period, m_jointsAcc_curve.m_bCurve);
+      // m_jointsAcc_curve.m_bCurve.row(0).fill(0);
+      // m_jointsAcc_curve.m_bCurve.row(int(m_jointsAcc_curve.m_bCurve.rows())-1).fill(0);
+      // m_jointsAcc_curve.comp_bezier_curve();
+      m_jointsAcc_curve.m_bCurve= m_jointsAcc_curve.comp_bezier_curve(m_numIntervals)/(time_interval*time_interval);
+    //  write_data(m_jointsAcc_curve.m_bCurve, "acc_bCurve0_deriv.txt");
+      
+      time_interval=synchronise_time(m_jointsVel_curve.m_bCurve, m_jointsAcc_curve.m_bCurve, time_interval);
+      std::cout<<"synchronise_time"<<std::endl;
+      // std::cout<<m_numIntervals<<std::endl;
+      
+      addPts_flag=check_time_reduction(newPoints);
+      std::cout<<"Do While loop"<<do_ctr<<std::endl;
+      do_ctr=do_ctr+1;
+      
+    }
+    while(time_interval*m_numIntervals.size()>m_timeDesired &&(do_ctr<ctr_lim) && addPts_flag);
+    m_numIntervals.fill(ceil(time_interval/m_period));
+    
+    m_jointsPos_curve.m_bCurve.resize(int(m_numIntervals.sum()+1),m_dim);
+    m_jointsVel_curve.m_bCurve.resize(int(m_numIntervals.sum()+1),m_dim);
+    m_jointsAcc_curve.m_bCurve.resize(int(m_numIntervals.sum()+1),m_dim);
+    
+    m_jointsPos_curve.m_bCurve=m_jointsPos_curve.comp_bezier_curve(m_numIntervals);
+   // write_data(m_jointsPos_curve.m_bCurve, "pos_bCurve.txt");
+    
+    double T= m_period*m_numIntervals(0);
+    
+    m_jointsVel_curve.m_bCurve= m_jointsVel_curve.comp_bezier_curve(m_numIntervals)/T;
+   // write_data(m_jointsVel_curve.m_bCurve, "vel_bCurve.txt");
+    
+    m_jointsAcc_curve.m_bCurve= m_jointsAcc_curve.comp_bezier_curve(m_numIntervals)/(T*T);
+   // write_data(m_jointsAcc_curve.m_bCurve, "acc_bCurve.txt");
+    
+    base::VectorXd time(m_jointsPos_curve.m_bCurve.rows(),1);
+    for(int i=0; i<int(time.size());i++)
+    {
+      time(i)=i*m_period;
+    }
+  //  write_data(time, "time.txt");
+  //  write_data(m_jointsPos_curve.m_trajPoints, "final_trajpoints.txt");
+    
+    base::JointsTrajectory jointsTraj_out;
+    map_baseMatrix2jointsTraj(jointsTraj_out);    
+    return jointsTraj_out;
+  }
+  
+  base::JointsTrajectory joints_trajectory::calc_joint_traj_bezier(const base::JointsTrajectory& joints_traj_in, const base::JointLimits& limits,  double period, double acc_max, int end_condition, double time_desired)
+  {
+    m_speedLevel=100;
     initialise_data(joints_traj_in,limits,period);
     // m_jointsPos_curve.initialise_data();
    
     int addPts_flag=0;
     double time_interval=1;
     int do_ctr=0;  
+    int ctr_lim;
+    std::cout<<"Enter time optim counter"<<std::endl;
+    std::cin>>ctr_lim;
+    
     base::VectorXi newPoints(m_numIntervals.size());
     newPoints.fill(0);
     
     m_jointsPos_curve.m_numIntervals=1/m_period;
-    m_jointsPos_curve.m_condition=0;
+    m_jointsPos_curve.m_condition=1;
     m_jointsPos_curve.comp_deBoor_controlpts();
     m_jointsPos_curve.comp_bezier_coeff();
    // std::cout<<"m_jointsPos_curve.comp_bezier_coeff"<<std::endl;
@@ -106,13 +274,12 @@ namespace trajectory_planner
 	//std::cout<<"m_numIntervals.size="<<m_numIntervals.size()<<std::endl;
 	m_noTrajPts=m_jointsPos_curve.m_trajPoints.rows();
 	//std::cout<<"m_noTrajPts.size="<<m_noTrajPts<<std::endl;
-	
       }
       m_numIntervals.fill(ceil(time_interval/m_period));
       m_jointsPos_curve.m_bCurve.resize(int(m_numIntervals.sum()+1),m_dim);
       m_jointsVel_curve.m_bCurve.resize(int(m_numIntervals.sum()+1),m_dim);
       m_jointsAcc_curve.m_bCurve.resize(int(m_numIntervals.sum()+1),m_dim);
-      m_jointsPos_curve.initialise_data(m_noTrajPts, m_dim,m_period,m_order,0);
+      m_jointsPos_curve.initialise_data(m_noTrajPts, m_dim,m_period,m_order,1);
       std::cout<<"m_jointsPos_curve.initialise_data"<<std::endl;
       m_jointsVel_curve.initialise_data(m_noTrajPts, m_dim,m_period,m_order-1,0);
       m_jointsAcc_curve.initialise_data(m_noTrajPts, m_dim,m_period,m_order-2,0);
@@ -149,7 +316,7 @@ namespace trajectory_planner
       do_ctr=do_ctr+1;
    
     }
-    while(time_interval*m_numIntervals.size()>m_timeDesired &&(do_ctr<2) && addPts_flag);
+    while(time_interval*m_numIntervals.size()>m_timeDesired &&(do_ctr<ctr_lim) && addPts_flag);
     m_numIntervals.fill(ceil(time_interval/m_period));
     
     m_jointsPos_curve.m_bCurve.resize(int(m_numIntervals.sum()+1),m_dim);
@@ -173,9 +340,10 @@ namespace trajectory_planner
       time(i)=i*m_period;
     }
     write_data(time, "time.txt");
-    base::JointsTrajectory jointsTraj_out;
-    map_baseMatrix2jointsTraj(jointsTraj_out);
+    write_data(m_jointsPos_curve.m_trajPoints, "final_trajpoints.txt");
     
+    base::JointsTrajectory jointsTraj_out;
+    map_baseMatrix2jointsTraj(jointsTraj_out);    
     return jointsTraj_out;
   }
   
@@ -239,6 +407,8 @@ namespace trajectory_planner
      
   
   }
+  
+  // checks if the positions ae within joint limits
 
   int joints_trajectory::check_position(base::VectorXi& newPoints)
   {
@@ -262,6 +432,8 @@ namespace trajectory_planner
     return newPoints.sum();
     
   }
+  
+  //check if there is possibility for time reduction
   
   int joints_trajectory::check_time_reduction(base::VectorXi& newPoints)
   {
@@ -290,7 +462,7 @@ namespace trajectory_planner
     return result;
   }
   
-  
+  //converts joints trajectory to base matrix form
   void joints_trajectory::map_jointsTraj2baseMatrix(const base::JointsTrajectory& jointsTraj_in)
   {
     if(jointsTraj_in.elements[0][0].hasPosition())
@@ -337,7 +509,7 @@ namespace trajectory_planner
       } 
     }
   }
-  
+  // convert interpolated bezier curve in base matrix form to base::JointsTrajectory
   void joints_trajectory::map_baseMatrix2jointsTraj(base::JointsTrajectory& jointsTraj_out)
   {
     jointsTraj_out.resize(m_dim,m_jointsPos_curve.m_bCurve.rows());
@@ -379,6 +551,8 @@ namespace trajectory_planner
     
     }
   }
+  
+  //write data to a txt file from a base matrix
 
   void joints_trajectory::write_data(const base::MatrixXd& bCurve, const char*filename)
   {
