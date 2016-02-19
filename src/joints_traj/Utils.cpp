@@ -19,7 +19,7 @@ namespace utils{
       boost::shared_ptr<urdf::Joint> joint = it->second;
       base::JointLimitRange range;
       
-      if(joint->type != urdf::Joint::FIXED){
+      if(joint->type != urdf::Joint::FIXED && !joint->mimic){
 	if(joint->limits)
 	{
 	  if (joint->type == urdf::Joint::CONTINUOUS) 
