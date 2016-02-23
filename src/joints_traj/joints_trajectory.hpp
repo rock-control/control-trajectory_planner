@@ -43,7 +43,9 @@ namespace trajectory_planner
     ~joints_trajectory();
     
     base::JointsTrajectory calc_joint_traj_bezier(const base::JointsTrajectory& joints_traj_in, const base::JointLimits& limits,  double period=0.01, double acc_max=10.0, int end_condition=0, double time_desired=-1);
-    base::JointsTrajectory calc_joint_traj_bezier(const base::JointsTrajectory& joints_traj_in);
+    base::JointsTrajectory calc_joint_traj_bezier(base::JointsTrajectory& joints_traj_in);
+    
+    void checkJointsTrajectoryPoints(base::JointsTrajectory& joints_traj_in);
     
     void initialise_data(const base::JointsTrajectory& joints_traj_in, const base::JointLimits& limits,  double period=0.01);
     void initialise_data(const base::JointLimits& limits,  double period, double acc, int speed_level, int end_condition);

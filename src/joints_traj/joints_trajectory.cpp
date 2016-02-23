@@ -75,9 +75,47 @@ namespace trajectory_planner
     
   }
   
+  void joints_trajectory :: checkJointsTrajectoryPoints(base::JointsTrajectory& joints_traj_in)
+  {
+    
+    int noPts = joints_traj_in.elements[0].size();
+    switch (noPts)
+    {
+      case 0:
+      {
+	
+	std::cout<<"Joints Trajectory matrix empty. Needs atleast two points"<<std::endl;
+	break;
+      }  
+      case 1:
+      { 
+	std::cout<<"Joints Trajectory matrix has only one point"<<std::endl;
+	break;
+      }  
+      case 2:
+      {
+	std::cout<<"Adding intermediate points for linear interpolation"<<std::endl;
+	base::JointsTrajectory jointsTrajTemp=joints_traj_in;
+	joints_traj_in.resize(m_noJts, 4);
+	for(unsigned j=0; j<m_noJts; j++)
+	{
+	  joints_traj_in.elements[j][0].position = jointsTrajTemp.elements[j][0].position;
+	  joints_traj_in.elements[j][1].position = 0.67*jointsTrajTemp.elements[j][0].position+ 0.33*jointsTrajTemp.elements[j][1].position;
+	  joints_traj_in.elements[j][2].position = 0.33*jointsTrajTemp.elements[j][0].position+ 0.67*jointsTrajTemp.elements[j][1].position;
+	  joints_traj_in.elements[j][3].position = jointsTrajTemp.elements[j][1].position;
+	}
+	break;
+      }  
+      default:
+      {
+	std::cout<<"Calculating bezier curve"<<std::endl;
+      }
+    }
+  }
+  
   //wrapper function that takes sparse trajectory and outputs interpolated one 
   
-  base::JointsTrajectory joints_trajectory::calc_joint_traj_bezier(const base::JointsTrajectory& joints_traj_in)
+  base::JointsTrajectory joints_trajectory::calc_joint_traj_bezier(base::JointsTrajectory& joints_traj_in)
   {
     
     m_dim=joints_traj_in.getNumberOfJoints();
