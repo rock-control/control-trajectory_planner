@@ -9,6 +9,12 @@ namespace utils{
   base::JointLimits initFromURDF(const std::string& filepath)
   {
     std::ifstream file(filepath.c_str());
+    
+    if (!file.is_open())
+    {  
+      std::cout<<"cannot open the urdf file" <<std::endl; 
+     
+    }
     std::string xml((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
     boost::shared_ptr<urdf::ModelInterface> urdf_model = urdf::parseURDF(xml);
     
